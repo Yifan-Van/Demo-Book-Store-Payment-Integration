@@ -19,10 +19,57 @@
             <label for="email">Email address</label>
             <input type="email" class="form-control" id="email" name="email" placeholder="you@email.com">
           </div>
-          <div class="mt-20 text-center text-secondary border-placeholder">
-            Add Stripe Element here!
-          </div>
           <div class="mt-20">
+  
+<!-- Add Shipping Address collection -->
+<div class="mt-20">
+  <h6>Shipping Address</h6>
+  <div class="row mt-10">
+    <div class="col-12">
+      <label for="shipping-name">Full Name</label>
+      <input type="text" class="form-control" id="shipping-name" name="shipping-name" placeholder="John Doe" required>
+    </div>
+  </div>
+  <div class="row mt-10">
+    <div class="col-12">
+      <label for="shipping-address">Address</label>
+      <input type="text" class="form-control" id="shipping-address" name="shipping-address" placeholder="123 Main St" required>
+    </div>
+  </div>
+  <div class="row mt-10">
+    <div class="col-6">
+      <label for="shipping-city">City</label>
+      <input type="text" class="form-control" id="shipping-city" name="shipping-city" placeholder="New York" required>
+    </div>
+    <div class="col-6">
+      <label for="shipping-zip">ZIP/Postal Code</label>
+      <input type="text" class="form-control" id="shipping-zip" name="shipping-zip" placeholder="10001" required>
+    </div>
+  </div>
+</div>
+
+  <!-- Stripe Split Card element -->
+  <div class="mt-20">
+  <!-- 1st row: Card number -->
+  <label for="card-number">Card Number</label>
+  <div id="card-number-element" class="form-control" style="padding: 12px; border: 1px solid #ced4da; border-radius: 4px; margin-bottom: 10px;"></div>
+  
+  <!-- 2nd row：Expiry + CVC -->
+  <div class="row mt-20">
+    <div class="col-6">
+      <label for="card-expiry">Expiry Date (MM/YY)</label>
+      <div id="card-expiry-element" class="form-control" style="padding: 12px; border: 1px solid #ced4da; border-radius: 4px;"></div>
+    </div>
+    <div class="col-6">
+      <label for="card-cvc">CVC</label>
+      <div id="card-cvc-element" class="form-control" style="padding: 12px; border: 1px solid #ced4da; border-radius: 4px;"></div>
+    </div>
+  </div>
+  <!-- Error message area -->
+  <div id="card-errors" class="text-danger mt-10" role="alert"></div>
+</div>
+  <!-- Pay button -->
+  <div class="mt-20">
             <button type="submit" class="btn btn-lg btn-block btn-primary">Pay $<span class="amount" data-amount="{{amount}}"></span></button>
           </div>
         </form>
@@ -30,3 +77,146 @@
     </div>
   </div>
 </div>
+
+<!-- introduce Stripe.js library for payment processing  -->
+<script src="https://js.stripe.com/v3/"></script> 
+<script>
+  // Wait for the DOM to load before initializing Stripe Elements
+  document.addEventListener('DOMContentLoaded', async function() {
+    // get Stripe publishable key from template variable (passed from server)
+    const stripePk = '{{stripePk}}';
+    if (!stripePk || stripePk.includes('your')) {
+      document.getElementById('card-errors').textContent = 'Stripe public key is not configured! Please check your .env variables.';
+      return;
+    }
+    
+    // Initialize Stripe and Elements
+    const stripe = Stripe(stripePk);
+    const elements = stripe.elements();
+
+    // Define custom styling for the Stripe Elements
+    const elementStyle = {
+      style: {
+        base: {
+          color: '#32325d',
+          fontFamily: '"Helvetica Neue", Helvetica, sans-serif',
+          fontSmoothing: 'antialiased',
+          fontSize: '16px',
+          '::placeholder': {
+            color: '#aab7c4'
+          }
+        },
+        invalid: {
+          color: '#fa755a',
+          iconColor: '#fa755a'
+        }
+      }
+    };
+
+  // get the DOM elements where Stripe Elements will be mounted
+  const cardNumberDom = document.getElementById('card-number-element');
+  const cardExpiryDom = document.getElementById('card-expiry-element');
+  const cardCvcDom = document.getElementById('card-cvc-element');
+
+  // safety check: ensure the DOM elements exist before mounting
+  if (!cardNumberDom || !cardExpiryDom || !cardCvcDom) {
+      document.getElementById('card-errors').textContent = 'Payment form elements not found!';
+      return;
+    }
+
+  // create and mount the Stripe Elements (card number, expiry, CVC)
+  const cardNumberComp = elements.create('cardNumber', elementStyle);
+  const cardExpiryComp = elements.create('cardExpiry', elementStyle);
+  const cardCvcComp = elements.create('cardCvc', elementStyle);
+
+  cardNumberComp.mount(cardNumberDom);
+  cardExpiryComp.mount(cardExpiryDom);
+  cardCvcComp.mount(cardCvcDom);
+
+  // handle form submission for payment processing
+  const form = document.querySelector('form[name="payment-form"]');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault(); // prevent default form submission
+
+    // get email and amount from the form (amount is stored in a data attribute for convenience)
+    const email = document.getElementById('email').value;
+    const amount = document.querySelector('.amount').dataset.amount;
+
+    // get shipping address details from the form
+    const shippingName = document.getElementById('shipping-name').value;
+    const shippingAddress = document.getElementById('shipping-address').value;
+    const shippingCity = document.getElementById('shipping-city').value;
+    const shippingZip = document.getElementById('shipping-zip').value;
+
+    // basic client-side validation for email
+    if (!email) {
+        document.getElementById('card-errors').textContent = 'Please enter your email!';
+        return;
+    }
+
+    // basic client-side validation for shipping address fields
+    if (!shippingName || !shippingAddress || !shippingCity || !shippingZip) {
+      document.getElementById('card-errors').textContent = 'Please fill in all shipping address fields!';
+      return;
+    }
+
+    // create payment intent on the server and get the client secret for payment confirmation
+    try {
+      const response = await fetch('/create-payment-intent', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ 
+        email, 
+        amount,
+        shipping: { // include shipping details in the payment intent creation request
+          name: shippingName,
+          address: {
+            line1: shippingAddress,
+            city: shippingCity,
+            postal_code: shippingZip,
+            country: 'US' // for simplicity, we use a fixed country code here
+          }
+        }
+      })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Server error' }));
+      document.getElementById('card-errors').textContent = `Backend Error: ${errorData.error}`;
+      return;
+    }
+    
+    const { clientSecret } = await response.json();
+    if (!clientSecret) {
+          document.getElementById('card-errors').textContent = 'Missing payment intent client secret!';
+          return;
+    }
+
+    // confirm the card payment using the client secret and card details collected by Stripe Elements
+    const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+      payment_method: {
+        card: cardNumberComp,
+        billing_details: {
+          email: email,
+        },
+      },
+    });
+
+    // handle the result of the payment confirmation
+    if (error) {
+      document.getElementById('card-errors').textContent = error.message;
+    } else if (paymentIntent.status === 'succeeded') {
+      // payment successful, redirect to success page with payment details in query params
+      const totalAmount = (amount / 100).toFixed(2); // convert cents to dollars for display
+      window.location.href = `/success?paymentIntentId=${paymentIntent.id}&amount=${totalAmount}&shippingName=${shippingName}&shippingAddress=${shippingAddress}&shippingCity=${shippingCity}&shippingZip=${shippingZip}`;
+      // redirect to success page and pass payment intent ID, amount and shipping address as query parameters for display;
+    }
+  } catch (err) {
+        document.getElementById('card-errors').textContent = `Unexpected Error: ${err.message}`;
+        console.error('Payment error:', err);
+  }
+});
+});
+</script>

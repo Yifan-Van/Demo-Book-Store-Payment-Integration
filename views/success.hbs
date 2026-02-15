@@ -6,8 +6,51 @@
     </h1>
   </div>
   <div class="mt-40 text-center">
-    <div class="mt-20 text-center text-secondary border-placeholder">
-      Add details about the payment here!
+    <div class="mt-20 text-center">
+      <h4 class="text-info">Thank you for your purchase!</h4>
+      <!-- Display total amount -->
+      <p class="mt-20 text-secondary" style="font-size: 18px;">
+        Total Amount Paid: $<span id="payment-amount" style="font-weight: 600;"></span>
+      </p>
+      <!--  Display Stripe Payment Intent ID（starting with pi_） -->
+      <p class="mt-10 text-secondary">
+        Stripe Payment Intent ID: 
+        <span id="payment-intent-id" style="font-family: monospace; color: #0d6efd;"></span>
+      </p>
+    <!-- Display the shipping address -->
+    <div class="mt-30 text-left mx-auto" style="max-width: 400px;">
+      <h5 class="text-info">Your book will be delivered to:</h5>
+      <p id="shipping-address-display" class="text-secondary"></p>
     </div>
+    </div>
+    <!-- Back to homepage button to make Closed-loop UX -->
+    <a href="/" class="btn btn-primary mt-40">Back to Book Store</a>
   </div>
 </main>
+
+<!-- Get payment details from URL query parameters -->
+<script>
+  const urlParams = new URLSearchParams(window.location.search);
+  const intentId = urlParams.get('paymentIntentId');
+  const amount = urlParams.get('amount');
+
+  const shippingName = urlParams.get('shippingName');
+  const shippingAddress = urlParams.get('shippingAddress');
+  const shippingCity = urlParams.get('shippingCity');
+  const shippingZip = urlParams.get('shippingZip');
+
+  if (shippingName && shippingAddress && shippingCity && shippingZip) {
+    document.getElementById('shipping-address-display').textContent = `
+      ${shippingName}
+      ${shippingAddress}
+      ${shippingCity}, US ${shippingZip}
+    `.trim();
+  } else {
+    document.getElementById('shipping-address-display').textContent = 'N/A';
+  }
+
+  // Display payment details on the page
+  document.getElementById('payment-intent-id').textContent = intentId || 'N/A';
+  document.getElementById('payment-amount').textContent = amount || '0.00';
+  document.getElementById('shipping-address-display').textContent = `${shippingAddress}, ${shippingCity}, ${shippingZip}`;
+</script>

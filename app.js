@@ -1,8 +1,8 @@
 const express = require('express');
 const path = require('path');
 const exphbs = require('express-handlebars');
-require('dotenv').config();
-const stripe = require('stripe');
+require('dotenv').config(); 
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY); // read Stripe secret key from .env
 
 var app = express();
 
@@ -12,9 +12,36 @@ app.engine('hbs', exphbs({
   extname: '.hbs'
 }));
 app.set('view engine', 'hbs');
+app.set('view cache', false); // disable view caching for development
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }))
 app.use(express.json({}));
+
+// callback route for Stripe to create a PaymentIntent
+app.post('/create-payment-intent', async (req, res) => {
+  try { // try-catch block to handle errors gracefully
+    const { email, amount , shipping} = req.body;
+    
+    // validate input
+    if (!amount || !email || !shipping) {
+      return res.status(400).json({ error: 'Email, amount, and shipping details are required' });
+    }
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Number(amount), // ensure amount is cents and a number
+      currency: 'usd',
+      receipt_email: email, // Key Update：customer_email → receipt_email
+      shipping: shipping, // include shipping details in the payment intent creation request
+      automatic_payment_methods: { enabled: true }
+    });
+
+    res.json({ clientSecret: paymentIntent.client_secret });
+  } catch (error) {
+    // return error message to client and log it on server for debugging
+    res.status(500).json({ error: error.message });
+    console.error('Stripe Payment Intent Error:', error.message); 
+  }
+});
 
 /**
  * Home route
@@ -53,7 +80,8 @@ app.get('/checkout', function(req, res) {
   res.render('checkout', {
     title: title,
     amount: amount,
-    error: error
+    error: error,
+    stripePk: process.env.STRIPE_PUBLISHABLE_KEY // pass Stripe publishable key to the view for client-side use
   });
 });
 
