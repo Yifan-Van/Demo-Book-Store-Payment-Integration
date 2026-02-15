@@ -19,7 +19,7 @@ Follow these step-by-step instructions to set up and run the application locally
 First, clone the project repository to your local machine and navigate into the project folder:
 
 ```bash
-git clone https://github.com/Yifan-Van/Demo-Book-Store-Payment-Integration
+git clone https://github.com/Yifan-Van/Demo-Book-Store-Payment-Integration.git
 cd Demo-Book-Store-Payment-Integration
 ```
 
@@ -29,7 +29,6 @@ Install all required packages (including Stripe SDK) using npm:
 
 ```bash
 npm install
-npm install stripe@latest --save
 ```
 
 ### Step 3: Configure Environment Variables
@@ -84,15 +83,15 @@ This application follows a simple, intuitive flow to handle book selection and s
 
 ### Core Workflow
 
-1. **Book Selection**: Users visit the homepage (`/`), select a book, and are redirected to the checkout page with the book’s ID (passed via URL query parameter).
+2.1. **Book Selection**: Users visit the homepage (`/`), select a book, and are redirected to the checkout page with the book’s ID (passed via URL query parameter).
 
-2. **Checkout Page**: The checkout page (`/checkout`) loads the book’s title and price, collects the user’s email, shipping address and renders Stripe’s Payment Element (split into card number, expiry date, and CVC fields for better user experience).
+2.2. **Checkout Page**: The checkout page (`/checkout`) loads the book’s title and price, collects the user’s email, shipping address and renders Stripe’s Payment Element (split into card number, expiry date, and CVC fields for better user experience).
 
-3. **Payment Intent Creation**: When the user clicks "Pay", the frontend sends a POST request to the `/create-payment-intent` API endpoint. The backend uses Stripe’s API to create a Payment Intent.
+2.3. **Payment Intent Creation**: When the user clicks "Pay", the frontend sends a POST request to the `/create-payment-intent` API endpoint. The backend uses Stripe’s API to create a Payment Intent.
 
-4. **Payment Confirmation**: The backend returns a`clientSecret` (from the Payment Intent) to the frontend. The frontend uses this `clientSecret` to call Stripe’s `confirmCardPayment` method, which validates the card details and processes the payment.
+2.4. **Payment Confirmation**: The backend returns a`clientSecret` (from the Payment Intent) to the frontend. The frontend uses this `clientSecret` to call Stripe’s `confirmCardPayment` method, which validates the card details and processes the payment.
 
-5. **Success Confirmation**: If the payment succeeds, the user will be redirected to the success page (`/success`), which displays the total amount paid, the Stripe Payment Intent ID (begins with `pi_`) and where the booked will be delivered to.
+2.5. **Success Confirmation**: If the payment succeeds, the user will be redirected to the success page (`/success`), which displays the total amount paid, the Stripe Payment Intent ID (begins with `pi_`) and where the booked will be delivered to.
 
 ### Stripe APIs & Components Used
 
@@ -136,17 +135,17 @@ I approached this project with a "user-first, problem-solve step-by-step" mindse
 
 ### Problem-Solving Approach
 
-1. **Requirement Analysis**: First, I checked my starting point based on the repo provided and I found what I need to do is: (1) Allow users to select a book(this actually is already completed based on the repo); (2) Implement checkout with Stripe Payment Element; (3) Display payment confirmation with amount and Payment Intent ID. (4) Optmization after local running for the entire functionality. I prioritized these goals to ensure the application works end-to-end before adding enhancements.
+3.1. **Requirement Analysis**: First, I checked my starting point based on the repo provided and I found what I need to do is: (1) Allow users to select a book(this actually is already completed based on the repo); (2) Implement checkout with Stripe Payment Element; (3) Display payment confirmation with amount and Payment Intent ID. (4) Optmization after local running for the entire functionality. I prioritized these goals to ensure the application works end-to-end before adding enhancements.
 
-2. **Environment Setup**: I set up the Node.js/Express project, installed dependencies (including Stripe SDK and Handlebars), and configured basic routes to ensure the frontend templates load correctly.
+3.2. **Environment Setup**: I set up the Node.js/Express project, installed dependencies (including Stripe SDK and Handlebars), and configured basic routes to ensure the frontend templates load correctly.
 
-3. **Stripe Integration (Frontend)**: I embedded Stripe’s Payment Element into the checkout page, choosing the split-field design (card number, expiry, CVC) for better user experience. I ensured the element renders correctly and is compatible with the application’s styling.
+3.3. **Stripe Integration (Frontend)**: I embedded Stripe’s Payment Element into the checkout page, choosing the split-field design (card number, expiry, CVC) for better user experience. I ensured the element renders correctly and is compatible with the application’s styling.
 
-4. **Stripe Integration (Backend)**: I implemented the `/create-payment-intent` API endpoint to create a Payment Intent, handle input validation, and return the `clientSecret` to the frontend. I used environment variables to secure Stripe keys.
+3.4. **Stripe Integration (Backend)**: I implemented the `/create-payment-intent` API endpoint to create a Payment Intent, handle input validation, and return the `clientSecret` to the frontend. I used environment variables to secure Stripe keys.
 
-5. **Testing & Debugging**: I tested the full flow repeatedly, fixing errors (e.g., 500 API errors, incorrect payment amounts) and ensuring the success page displays the correct transaction details.
+3.5. **Testing & Debugging**: I tested the full flow repeatedly, fixing errors (e.g., 500 API errors, incorrect payment amounts) and ensuring the success page displays the correct transaction details.
 
-6. **Usability Enhancements**: I added try-catch logic to better handle errors. From a user experience perspective, I added shipping address collection and a "Back to Book Store" button on the success page, and display detailed transaction related values.
+3.6. **Usability Enhancements**: I added try-catch logic to better handle errors. From a user experience perspective, I added shipping address collection and a "Back to Book Store" button on the success page, and display detailed transaction related values.
 
 ### Documentation Used
 
@@ -171,7 +170,7 @@ During development, I faced several common challenges—all of which were resolv
 |Challenge|Solution|
 |---|---|
 |Stripe Payment Element not rendering or unclickable|Wrapped the Stripe initialization code in`DOMContentLoaded` to ensure the frontend DOM loads before mounting the element. Also fixed variable name conflicts that caused JavaScript syntax errors.|
-|Incorrect payment amount (100x higher than expected)|Fixed double amount conversion: The book price was already stored in cents (e.g., $23 = 2300 cents), so I removed the extra `Number(amount) * 100` in the Payment Intent creation.|
+|Incorrect payment amount (100x larger than expected)|Fixed double amount conversion: The book price was already stored in cents (e.g., $23 = 2300 cents), so I removed the extra `Number(amount) * 100` in the Payment Intent creation.|
 |500 Error: "Received unknown parameter: customer_email"|Replaced `customer_email` with`receipt_email` (Checked field names from Stripe API doc).|
 |Missing shipping address collection during checkout|Added shipping address collection and pass the value to URL so it can be displayed in the success page.|
 
@@ -179,7 +178,7 @@ During development, I faced several common challenges—all of which were resolv
 
 This application provides a solid foundation for a book store with Stripe payments. To make it more robust, scalable, and production-ready, here are key enhancements I would add:
 
-### 1. Payment & Order Management
+### 4.1. Payment & Order Management
 
 - **Add a Database**: Integrate a database to store book details, inventory, user information, and order history (currently the book data are hardcoded).
 
@@ -187,7 +186,7 @@ This application provides a solid foundation for a book store with Stripe paymen
 
 - **Refund Functionality**: Add a refund feature using Stripe’s Refunds API, allowing admins to process refunds and update order statuses.
 
-### 2. User Experience (UX) Improvements
+### 4.2. User Experience (UX) Improvements
 
 - **Shopping Cart**: Add a shopping cart feature to allow users to select multiple books and checkout once (instead of one book at a time).
 
@@ -197,7 +196,7 @@ This application provides a solid foundation for a book store with Stripe paymen
 
 - **Payment Methods Extension**: Extend the Stripe Payment Element to support Apple Pay, Google Pay, and other payment methods.
 
-### 3. Scalability & Security
+### 4.3. Scalability & Security
 
 - **Rate Limiting**: Add rate limiting (e.g., using express-rate-limit) to prevent API abuse and protect against brute-force attacks.
 
